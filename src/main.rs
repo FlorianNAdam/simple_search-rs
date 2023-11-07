@@ -1,22 +1,3 @@
-# simple_search-rs
-
-A simple library for searching objects.
-It is still very work in progress!
-
-## Installation
-
-To include `simple_search` in your project, add the following to your `Cargo.toml`:
-
-```toml
-[dependencies]
-simple_search = "0.1.1"  # Use the latest version
-```
-
-The library supports multithreading, based on `rayon`. To use it, enable the feature `rayon`.
-
-## Example
-
-```rust
 use simple_search::levenshtein::incremental::IncrementalLevenshtein;
 use simple_search::stateful::search_engine::SearchEngine;
 use simple_search::stateful::state::SearchEngineState;
@@ -93,5 +74,3 @@ fn main() {
         println!("{:?}", result);
     }
 }
-
-```
