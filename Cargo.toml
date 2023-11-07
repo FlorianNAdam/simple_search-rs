@@ -1,6 +1,6 @@
 [package]
 name = "simple_search"
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 description = "A simple library for searching objects"
 homepage = "https://github.com/FlorianNAdam/simple_search-rs"
