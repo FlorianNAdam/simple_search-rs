@@ -1,5 +1,12 @@
+//! This module provides the `IncrementalLevenshtein` struct which is designed for
+//! efficiently computing Levenshtein distances and similarity scores for scenarios where
+//! the 'query' string is subject to incremental changes.
+
 use crate::levenshtein::base::{edit_operations, levenshtein_matrix, EditOperation};
 
+/// A structure for incrementally calculating Levenshtein distances and similarities.
+/// This is particularly efficient when repeatedly comparing slight variations of the query
+/// against a constant data string.
 #[derive(Clone)]
 pub struct IncrementalLevenshtein {
     query: String,
@@ -8,6 +15,13 @@ pub struct IncrementalLevenshtein {
 }
 
 impl IncrementalLevenshtein {
+    /// Constructs a new `IncrementalLevenshtein` with the given query and data strings.
+    /// Initializes the Levenshtein matrix based on the provided strings.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - A slice of the query string.
+    /// * `data` - A slice of the data string.
     pub fn new(query: &str, data: &str) -> Self {
         Self {
             query: query.to_string(),
@@ -16,6 +30,16 @@ impl IncrementalLevenshtein {
         }
     }
 
+    /// Private method to determine the length of the identical starting substring
+    /// between the current query and a new query.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_query` - A slice of the new query string to compare.
+    ///
+    /// # Returns
+    ///
+    /// A `usize` value indicating the count of identical leading characters.
     fn query_similarity(&mut self, new_query: &str) -> usize {
         let mut identical = 0;
         for (new, old) in self.query.chars().zip(new_query.chars()) {
@@ -28,6 +52,12 @@ impl IncrementalLevenshtein {
         identical
     }
 
+    /// Updates the Levenshtein matrix based on the new query string.
+    /// This method should be called before calculating similarity if the query has changed.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_query` - A slice of the new query string.
     fn update(&mut self, new_query: &str) {
         let query_similarity = self.query_similarity(new_query);
 
@@ -66,6 +96,16 @@ impl IncrementalLevenshtein {
         }
     }
 
+    /// Calculates the similarity ratio between the stored data string and the new query string
+    /// after updating the internal state with the new query.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_query` - A slice of the new query string to compare.
+    ///
+    /// # Returns
+    ///
+    /// A `f64` representing the similarity ratio (0.0 meaning no similarity and 1.0 meaning identical).
     pub fn similarity(&mut self, new_query: &str) -> f64 {
         self.update(new_query);
         let distance = self.matrix[self.query.len()][self.data.len()];
@@ -77,6 +117,16 @@ impl IncrementalLevenshtein {
         }
     }
 
+    /// Calculates a weighted similarity ratio, which considers the length and type of edit
+    /// operations required to convert the query into the data string.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_query` - A slice of the new query string to compare.
+    ///
+    /// # Returns
+    ///
+    /// A `f64` representing the weighted similarity ratio.
     pub fn weighted_similarity(&mut self, new_query: &str) -> f64 {
         self.update(new_query);
 

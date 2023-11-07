@@ -1,3 +1,16 @@
+//! This module defines functions and data structures for calculating the Levenshtein distance
+//! and similarity between two strings
+
+/// Computes the Levenshtein distance between two strings.
+///
+/// # Arguments
+///
+/// * `a` - The first string to compare.
+/// * `b` - The second string to compare.
+///
+/// # Returns
+///
+/// Returns the Levenshtein distance as a `usize`.
 pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     let len_a = a.len();
     let len_b = b.len();
@@ -5,6 +18,16 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     matrix[len_a][len_b]
 }
 
+/// Computes the similarity ratio based on the Levenshtein distance between two strings.
+///
+/// # Arguments
+///
+/// * `a` - The first string to compare.
+/// * `b` - The second string to compare.
+///
+/// # Returns
+///
+/// Returns a `f64` representing the similarity ratio, where 1.0 is identical and 0.0 is completely dissimilar.
 pub fn levenshtein_similarity(a: &str, b: &str) -> f64 {
     let distance = levenshtein_distance(a, b);
     let max_distance = a.len().max(b.len());
@@ -15,6 +38,16 @@ pub fn levenshtein_similarity(a: &str, b: &str) -> f64 {
     }
 }
 
+/// Generates a matrix used to compute the Levenshtein distance between two strings.
+///
+/// # Arguments
+///
+/// * `a` - The first string to compare.
+/// * `b` - The second string to compare.
+///
+/// # Returns
+///
+/// Returns a matrix (`Vec<Vec<usize>>`) representing the costs of edits required to change the first string into the second.
 pub(crate) fn levenshtein_matrix(a: &str, b: &str) -> Vec<Vec<usize>> {
     let len_a = a.len();
     let len_b = b.len();
@@ -49,6 +82,7 @@ pub(crate) fn levenshtein_matrix(a: &str, b: &str) -> Vec<Vec<usize>> {
     matrix
 }
 
+/// Represents an edit operation in the Levenshtein distance algorithm.
 #[derive(Debug)]
 pub(crate) enum EditOperation {
     Insert(usize),
@@ -56,6 +90,18 @@ pub(crate) enum EditOperation {
     Substitute(usize, usize),
 }
 
+/// Calculates the edit operations required to transform the original string into the target string
+/// based on the Levenshtein matrix.
+///
+/// # Arguments
+///
+/// * `matrix` - The Levenshtein matrix representing the edit distances.
+/// * `original` - The original string.
+/// * `target` - The target string to transform into.
+///
+/// # Returns
+///
+/// Returns a vector of `EditOperation` which are the steps needed to convert the original string into the target string.
 pub(crate) fn edit_operations(
     matrix: &Vec<Vec<usize>>,
     original: &str,

@@ -1,10 +1,4 @@
-use difflib::sequencematcher::SequenceMatcher;
 use std::marker::PhantomData;
-
-pub fn str_similarity(a: &str, b: &str) -> f64 {
-    let mut matcher = SequenceMatcher::new(a, b);
-    matcher.ratio() as f64
-}
 
 pub struct Combination<V, Q: Clone, F: FnMut(&V, Q) -> f64, S: Similarity<V, Q>> {
     weight: f64,
