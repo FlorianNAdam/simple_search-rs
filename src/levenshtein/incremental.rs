@@ -1,6 +1,4 @@
-use crate::levenshtein::base::{
-    edit_operations, levenshtein_distance, levenshtein_matrix, EditOperation,
-};
+use crate::levenshtein::base::{edit_operations, levenshtein_matrix, EditOperation};
 
 #[derive(Clone)]
 pub struct IncrementalLevenshtein {
@@ -46,7 +44,6 @@ impl IncrementalLevenshtein {
 
         self.query = new_query.to_string();
 
-        let a = &self.query;
         let b = &self.data;
         let len_a = self.query.len();
         let len_b = self.data.len();

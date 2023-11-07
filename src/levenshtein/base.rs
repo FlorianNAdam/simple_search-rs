@@ -4,6 +4,17 @@ pub fn levenshtein_distance(a: &str, b: &str) -> usize {
     let matrix = levenshtein_matrix(a, b);
     matrix[len_a][len_b]
 }
+
+pub fn levenshtein_similarity(a: &str, b: &str) -> f64 {
+    let distance = levenshtein_distance(a, b);
+    let max_distance = a.len().max(b.len());
+    if max_distance == 0 {
+        0.
+    } else {
+        (max_distance - distance) as f64 / max_distance as f64
+    }
+}
+
 pub(crate) fn levenshtein_matrix(a: &str, b: &str) -> Vec<Vec<usize>> {
     let len_a = a.len();
     let len_b = b.len();

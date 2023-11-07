@@ -2,10 +2,11 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use rand::distributions::{Alphanumeric, DistString};
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
-use simple_similarity::levenshtein::{levenshtein_distance, IncrementalLevenshtein};
+use simple_search::levenshtein::base::levenshtein_similarity;
+use simple_search::levenshtein::incremental::IncrementalLevenshtein;
 
 fn bench_levenshtein_random_insert(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Levenshtein");
+    let mut group = c.benchmark_group("LevenshteinInsert");
 
     let mut rng = StdRng::seed_from_u64(42);
 
@@ -14,7 +15,7 @@ fn bench_levenshtein_random_insert(c: &mut Criterion) {
 
     let mut fast_lv = IncrementalLevenshtein::new(&query, &data);
 
-    for i in 0..100 {
+    for i in 0..20 {
         let addition = Alphanumeric.sample_string(&mut rng, 1);
 
         let index = rng.gen_range(0..=query.len());
@@ -29,10 +30,10 @@ fn bench_levenshtein_random_insert(c: &mut Criterion) {
             )
         });
         group.bench_function(BenchmarkId::new("Naive", i), |b| {
-            b.iter(|| levenshtein_distance(&query, &data))
+            b.iter(|| levenshtein_similarity(&query, &data))
         });
 
-        let slow_lv_sim = levenshtein_distance(&query, &data);
+        let slow_lv_sim = levenshtein_similarity(&query, &data);
         let fast_lv_sim = fast_lv.similarity(&query);
         assert_eq!(slow_lv_sim, fast_lv_sim);
     }
@@ -40,7 +41,7 @@ fn bench_levenshtein_random_insert(c: &mut Criterion) {
 }
 
 fn bench_levenshtein_random_append(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Levenshtein");
+    let mut group = c.benchmark_group("LevenshteinAppend");
 
     let mut rng = StdRng::seed_from_u64(17);
 
@@ -49,7 +50,7 @@ fn bench_levenshtein_random_append(c: &mut Criterion) {
 
     let mut fast_lv = IncrementalLevenshtein::new(&query, &data);
 
-    for i in 0..10 {
+    for i in 0..20 {
         let addition = Alphanumeric.sample_string(&mut rng, 1);
 
         query.push_str(&addition);
@@ -63,10 +64,10 @@ fn bench_levenshtein_random_append(c: &mut Criterion) {
             )
         });
         group.bench_function(BenchmarkId::new("Naive", i), |b| {
-            b.iter(|| black_box(levenshtein_distance(&query, &data)))
+            b.iter(|| black_box(levenshtein_similarity(&query, &data)))
         });
 
-        let slow_lv_sim = levenshtein_distance(&query, &data);
+        let slow_lv_sim = levenshtein_similarity(&query, &data);
         let fast_lv_sim = fast_lv.similarity(&query);
         assert_eq!(slow_lv_sim, fast_lv_sim);
     }
