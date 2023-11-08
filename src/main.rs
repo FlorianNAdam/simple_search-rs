@@ -35,7 +35,18 @@ fn main() {
 
     let mut engine = SearchEngine::new()
         .with_values(vec![book1, book2, book3, book4])
-        .with_state(|state: &mut IncrementalLevenshtein, _, query: &str| state.similarity(&query));
+        .with_state(
+            |value| IncrementalLevenshtein::new("", &value.title),
+            |state, _, query: &str| state.similarity(&query),
+        )
+        .with_state(
+            |value| IncrementalLevenshtein::new("", &value.author),
+            |state, _, query: &str| state.similarity(&query),
+        )
+        .with_state(
+            |value| IncrementalLevenshtein::new("", &value.description),
+            |state, _, query: &str| state.similarity(&query),
+        );
 
     let results = engine.similarities("Fire and Ice");
 

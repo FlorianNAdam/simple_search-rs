@@ -1,8 +1,7 @@
+use crate::granular::similarity::{Similarity, StatefulCombination, StatelessCombination};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 
-use crate::granular::similarity::{Similarity, StatefulCombination, StatelessCombination};
-use crate::granular::state::SearchEngineState;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
@@ -35,16 +34,19 @@ where
     S: Similarity<Value, Query>,
 {
     pub fn add_value(&mut self, value: Value) {
-        self.values.push((S::State::new(&value), value));
+        self.values.push((self.similarity.state(&value), value));
     }
 
     pub fn add_values(&mut self, values: Vec<Value>) {
-        let values: Vec<_> = values.into_iter().map(|v| (S::State::new(&v), v)).collect();
+        let values: Vec<_> = values
+            .into_iter()
+            .map(|v| (self.similarity.state(&v), v))
+            .collect();
         self.values.extend(values);
     }
 
     pub fn with_value(mut self, value: Value) -> Self {
-        self.values.push((S::State::new(&value), value));
+        self.values.push((self.similarity.state(&value), value));
         Self {
             values: self.values,
             similarity: self.similarity,
@@ -53,7 +55,10 @@ where
     }
 
     pub fn with_values(mut self, values: Vec<Value>) -> Self {
-        let values: Vec<_> = values.into_iter().map(|v| (S::State::new(&v), v)).collect();
+        let values: Vec<_> = values
+            .into_iter()
+            .map(|v| (self.similarity.state(&v), v))
+            .collect();
         self.values.extend(values);
         Self {
             values: self.values,
@@ -88,31 +93,35 @@ where
         }
     }
 
-    pub fn with_state<Func, State>(
+    pub fn with_state<Func, StateFunc, State>(
         self,
+        state_func: StateFunc,
         function: Func,
-    ) -> SearchEngine<Value, Query, StatefulCombination<Value, Query, S, Func, State>>
+    ) -> SearchEngine<Value, Query, StatefulCombination<Value, Query, S, Func, StateFunc, State>>
     where
         Func: Fn(&mut State, &Value, Query) -> f64,
-        State: SearchEngineState<Value>,
+        StateFunc: Fn(&Value) -> State,
     {
-        self.with_state_and_weight(1., function)
+        self.with_state_and_weight(1., state_func, function)
     }
 
-    pub fn with_state_and_weight<Func, State>(
+    pub fn with_state_and_weight<Func, StateFunc, State>(
         self,
         weight: f64,
+        state_function: StateFunc,
         function: Func,
-    ) -> SearchEngine<Value, Query, StatefulCombination<Value, Query, S, Func, State>>
+    ) -> SearchEngine<Value, Query, StatefulCombination<Value, Query, S, Func, StateFunc, State>>
     where
         Func: Fn(&mut State, &Value, Query) -> f64,
-        State: SearchEngineState<Value>,
+        StateFunc: Fn(&Value) -> State,
     {
-        let similarity = self.similarity.with_state_and_weight(weight, function);
+        let similarity = self
+            .similarity
+            .with_state_and_weight(weight, function, state_function);
         let values: Vec<_> = self
             .values
             .into_iter()
-            .map(|(state, value)| (<(State, S::State)>::new(&value), value))
+            .map(|(state, value)| (similarity.state(&value), value))
             .collect();
         SearchEngine {
             values,
