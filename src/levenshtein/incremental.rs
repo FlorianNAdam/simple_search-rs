@@ -2,7 +2,9 @@
 //! efficiently computing Levenshtein distances and similarity scores for scenarios where
 //! the 'query' string is subject to incremental changes.
 
-use crate::levenshtein::base::{edit_operations, levenshtein_matrix, EditOperation};
+use crate::levenshtein::base::{
+    edit_operations, levenshtein_matrix, weighted_edit_similarity, EditOperation,
+};
 
 /// A structure for incrementally calculating Levenshtein distances and similarities.
 /// This is particularly efficient when repeatedly comparing slight variations of the query
@@ -129,27 +131,6 @@ impl IncrementalLevenshtein {
     /// A `f64` representing the weighted similarity ratio.
     pub fn weighted_similarity(&mut self, new_query: &str) -> f64 {
         self.update(new_query);
-
-        let ops = edit_operations(&self.matrix, &self.query, &self.data);
-
-        let mut distance = 0.;
-
-        for op in ops {
-            match op {
-                EditOperation::Insert(len) => distance += (len as f64).ln_1p(),
-                EditOperation::Delete(len) => distance += (len as f64).ln_1p(),
-                EditOperation::Substitute(len_a, len_b) => {
-                    distance += (len_a as f64).ln_1p();
-                    distance += (len_b as f64).ln_1p();
-                }
-            }
-        }
-
-        let max_distance = self.query.len().max(self.data.len());
-        if max_distance == 0 {
-            0.
-        } else {
-            (max_distance as f64 - distance) / max_distance as f64
-        }
+        weighted_edit_similarity(&self.matrix, &self.query, &self.data)
     }
 }

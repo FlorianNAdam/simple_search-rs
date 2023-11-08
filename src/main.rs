@@ -1,22 +1,5 @@
+use simple_search::granular::search_engine::SearchEngine;
 use simple_search::levenshtein::incremental::IncrementalLevenshtein;
-use simple_search::stateful::search_engine::SearchEngine;
-use simple_search::stateful::state::SearchEngineState;
-
-struct BookSimilarityState {
-    title: IncrementalLevenshtein,
-    description: IncrementalLevenshtein,
-    author: IncrementalLevenshtein,
-}
-
-impl SearchEngineState<Book> for BookSimilarityState {
-    fn new(value: &Book) -> Self {
-        Self {
-            title: IncrementalLevenshtein::new("", &value.title),
-            description: IncrementalLevenshtein::new("", &value.description),
-            author: IncrementalLevenshtein::new("", &value.author),
-        }
-    }
-}
 
 #[derive(Debug)]
 struct Book {
@@ -50,13 +33,9 @@ fn main() {
         author: "Harper Lee".to_string(),
     };
 
-    let mut engine = SearchEngine::new::<BookSimilarityState>()
+    let mut engine = SearchEngine::new()
         .with_values(vec![book1, book2, book3, book4])
-        .with_key_fn(|state, _, query: &str| state.title.similarity(&query))
-        .with_key_fn_weighted(0.5, |state, _, query: &str| {
-            state.description.similarity(&query)
-        })
-        .with_key_fn_weighted(0.7, |state, _, query: &str| state.author.similarity(&query));
+        .with_state(|state: &mut IncrementalLevenshtein, _, query: &str| state.similarity(&query));
 
     let results = engine.similarities("Fire and Ice");
 

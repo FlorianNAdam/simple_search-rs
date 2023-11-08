@@ -38,6 +38,11 @@ pub fn levenshtein_similarity(a: &str, b: &str) -> f64 {
     }
 }
 
+pub fn weighted_levenshtein_similarity(a: &str, b: &str) -> f64 {
+    let matrix = levenshtein_matrix(a, b);
+    weighted_edit_similarity(&matrix, a, b)
+}
+
 /// Generates a matrix used to compute the Levenshtein distance between two strings.
 ///
 /// # Arguments
@@ -88,6 +93,7 @@ pub(crate) enum EditOperation {
     Insert(usize),
     Delete(usize),
     Substitute(usize, usize),
+    None(usize),
 }
 
 /// Calculates the edit operations required to transform the original string into the target string
@@ -159,4 +165,128 @@ pub(crate) fn edit_operations(
 
     operations.reverse(); // Reverse to get the correct order of operations.
     operations
+}
+
+pub(crate) fn edit_operations_2(
+    matrix: &Vec<Vec<usize>>,
+    original: &str,
+    target: &str,
+) -> Vec<EditOperation> {
+    let mut operations = Vec::new();
+    let mut i = original.len();
+    let mut j = target.len();
+
+    while i > 0 && j > 0 {
+        let current = matrix[i][j];
+        let deletion = matrix[i - 1][j] + 1;
+        let insertion = matrix[i][j - 1] + 1;
+        let substitution = matrix[i - 1][j - 1]
+            + if original.chars().nth(i - 1) == target.chars().nth(j - 1) {
+                0
+            } else {
+                1
+            };
+
+        // No change needed, move diagonally without any operation
+        if original.chars().nth(i - 1) == target.chars().nth(j - 1) {
+            i -= 1;
+            j -= 1;
+            continue;
+        }
+
+        if current == substitution {
+            // Substituting one char for another
+            operations.push(EditOperation::Substitute(1, 1));
+            i -= 1;
+            j -= 1;
+        } else if current == deletion {
+            // Count the number of deletions
+            let mut del_count = 0;
+            while i > 0 && matrix[i][j] == matrix[i - 1][j] + 1 {
+                del_count += 1;
+                i -= 1;
+            }
+            operations.push(EditOperation::Delete(del_count));
+        } else if current == insertion {
+            // Count the number of insertions
+            let mut ins_count = 0;
+            while j > 0 && matrix[i][j] == matrix[i][j - 1] + 1 {
+                ins_count += 1;
+                j -= 1;
+            }
+            operations.push(EditOperation::Insert(ins_count));
+        } else {
+            // If the cost is the same as the diagonal, it means no operation needed.
+            let mut no_change_count = 0;
+            while i > 0 && j > 0 && matrix[i][j] == matrix[i - 1][j - 1] {
+                i -= 1;
+                j -= 1;
+                no_change_count += 1;
+            }
+            operations.push(EditOperation::None(no_change_count));
+        }
+    }
+
+    // Handle remaining deletions
+    if i > 0 {
+        operations.push(EditOperation::Delete(i));
+    }
+
+    // Handle remaining insertions
+    if j > 0 {
+        operations.push(EditOperation::Insert(j));
+    }
+
+    operations.reverse(); // Reverse to get the correct order of operations
+    operations
+}
+
+pub(crate) fn weighted_edit_similarity(matrix: &Vec<Vec<usize>>, a: &str, b: &str) -> f64 {
+    let ops = edit_operations(matrix, a, b);
+
+    let mut distance = 0.;
+
+    for op in ops {
+        match op {
+            EditOperation::Insert(len) => distance += (len as f64).ln_1p(),
+            EditOperation::Delete(len) => distance += (len as f64).ln_1p(),
+            EditOperation::Substitute(len_a, len_b) => {
+                distance += (len_a as f64).ln_1p();
+                distance += (len_b as f64).ln_1p();
+            }
+            EditOperation::None(_) => {}
+        }
+    }
+
+    let max_distance = a.len().max(b.len());
+    if max_distance == 0 {
+        0.
+    } else {
+        (max_distance as f64 - distance) / max_distance as f64
+    }
+}
+
+pub(crate) fn weighted_edit_similarity_2(matrix: &Vec<Vec<usize>>, a: &str, b: &str) -> f64 {
+    let ops = edit_operations(matrix, a, b);
+
+    let mut distance = 0.;
+
+    for op in ops {
+        match op {
+            EditOperation::Insert(len) => distance += (len as f64).ln_1p(),
+            EditOperation::Delete(len) => distance += (len as f64).ln_1p(),
+            EditOperation::Substitute(len_a, len_b) => {
+                distance += (len_a as f64).ln_1p();
+                distance += (len_b as f64).ln_1p();
+            }
+            EditOperation::None(_) => {}
+        }
+    }
+
+    let max_distance = a.len().max(b.len());
+    if max_distance == 0 {
+        0.
+    } else {
+        (max_distance as f64 - distance) / max_distance as f64
+    }
 }
