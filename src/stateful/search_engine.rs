@@ -185,6 +185,22 @@ impl<'a, V, Q: Clone, S: Similarity<V, Q, State>, State: SearchEngineState<V>>
     }
 }
 
+impl<'a, V, Q: Clone, S: Similarity<V, Q, State>, State: SearchEngineState<V>> Clone
+    for SearchEngine<V, Q, S, State>
+where
+    V: Clone,
+    S: Clone,
+    State: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            values: self.values.clone(),
+            similarity: self.similarity.clone(),
+            phantom: Default::default(),
+        }
+    }
+}
+
 #[cfg(feature = "rayon")]
 impl<Q, V, S: Similarity<V, Q, State>, State> SearchEngine<V, Q, S, State>
 where

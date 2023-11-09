@@ -1,27 +1,27 @@
 use std::marker::PhantomData;
 
-pub struct Combination<V, Q: Clone, F: FnMut(&V, Q) -> f64, S: Similarity<V, Q>> {
+pub struct Combination<'a, V, Q: ?Sized, F: FnMut(&V, &Q) -> f64, S: Similarity<'a, V, Q>> {
     weight: f64,
     function: F,
     inner: S,
-    phantom: PhantomData<(V, Q)>,
+    phantom: PhantomData<(V, &'a Q)>,
 }
 
-pub trait Similarity<V, Q: Clone> {
-    fn similarity(&self, value: &V, query: Q) -> f64;
+pub trait Similarity<'a, V, Q: ?Sized> {
+    fn similarity<'b>(&self, value: &V, query: &'b Q) -> f64;
 
-    fn combine<F: Fn(&V, Q) -> f64>(self, function: F) -> Combination<V, Q, F, Self>
+    fn combine<F: Fn(&V, &Q) -> f64>(self, function: F) -> Combination<'a, V, Q, F, Self>
     where
         Self: Sized,
     {
         self.combine_weighted(1., function)
     }
 
-    fn combine_weighted<F: Fn(&V, Q) -> f64>(
+    fn combine_weighted<F: Fn(&V, &Q) -> f64>(
         self,
         weight: f64,
         function: F,
-    ) -> Combination<V, Q, F, Self>
+    ) -> Combination<'a, V, Q, F, Self>
     where
         Self: Sized,
     {
@@ -34,8 +34,8 @@ pub trait Similarity<V, Q: Clone> {
     }
 }
 
-impl<V, Q: Clone, F: Fn(&V, Q) -> f64 + Clone, S: Similarity<V, Q> + Clone> Clone
-    for Combination<V, Q, F, S>
+impl<'a, V, Q: ?Sized, F: Fn(&V, &Q) -> f64 + Clone, S: Similarity<'a, V, Q> + Clone> Clone
+    for Combination<'a, V, Q, F, S>
 {
     fn clone(&self) -> Self {
         Self {
@@ -47,18 +47,18 @@ impl<V, Q: Clone, F: Fn(&V, Q) -> f64 + Clone, S: Similarity<V, Q> + Clone> Clon
     }
 }
 
-impl<V, Q: Clone> Similarity<V, Q> for () {
-    fn similarity(&self, _value: &V, _query: Q) -> f64 {
+impl<'a, V, Q: ?Sized> Similarity<'a, V, Q> for () {
+    fn similarity<'b>(&self, _value: &V, _query: &'b Q) -> f64 {
         0.
     }
 }
 
-impl<V, Q: Clone, F: Fn(&V, Q) -> f64, S: Similarity<V, Q>> Similarity<V, Q>
-    for Combination<V, Q, F, S>
+impl<'a, V, Q: ?Sized, F: Fn(&V, &Q) -> f64, S: Similarity<'a, V, Q>> Similarity<'a, V, Q>
+    for Combination<'a, V, Q, F, S>
 {
-    fn similarity(&self, value: &V, query: Q) -> f64 {
+    fn similarity<'b>(&self, value: &V, query: &'b Q) -> f64 {
         self.inner
-            .similarity(value, query.clone())
+            .similarity(value, query)
             .max(self.weight * (self.function)(value, query))
     }
 }

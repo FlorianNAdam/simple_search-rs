@@ -1,5 +1,6 @@
-use simple_search::granular::search_engine::SearchEngine;
-use simple_search::levenshtein::incremental::IncrementalLevenshtein;
+use simple_search::levenshtein::base::weighted_levenshtein_similarity;
+use simple_search::stateless::search_engine::SearchEngine;
+use std::marker::PhantomData;
 
 #[derive(Debug)]
 struct Book {
@@ -33,22 +34,13 @@ fn main() {
         author: "Harper Lee".to_string(),
     };
 
-    let mut engine = SearchEngine::new()
-        .with_values(vec![book1, book2, book3, book4])
-        .with_state(
-            |value| IncrementalLevenshtein::new("", &value.title),
-            |state, _, query: &str| state.similarity(&query),
-        )
-        .with_state(
-            |value| IncrementalLevenshtein::new("", &value.author),
-            |state, _, query: &str| state.similarity(&query),
-        )
-        .with_state(
-            |value| IncrementalLevenshtein::new("", &value.description),
-            |state, _, query: &str| state.similarity(&query),
-        );
+    let mut engine = SearchEngine::new().with_values(vec![book1, book2, book3, book4]);
 
-    let results = engine.similarities("Fire and Ice");
+    let mut query = "Fire and Ice".to_string();
+
+    let results = engine.similarities(query.as_str());
+
+    query.push_str("test");
 
     println!("search for Fire and Ice:");
     for result in results {
@@ -59,8 +51,23 @@ fn main() {
 
     let results = engine.similarities("Fitzgerald");
 
-    println!("search for Fitzgerald:");
-    for result in results {
-        println!("{:?}", result);
-    }
+    let mut query = "Fire and Ice".to_string();
+
+    let test: Test<_> = Test {
+        phantom: Default::default(),
+    };
+
+    test.test(&query);
+
+    query.push_str("test");
+
+    test.test(&query)
+}
+
+struct Test<T> {
+    phantom: PhantomData<T>,
+}
+
+impl<T> Test<T> {
+    fn test(&self, t: T) {}
 }

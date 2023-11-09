@@ -27,3 +27,6 @@ rand = "0.8.5"
 name = "levenshtein_benchmark"
 harness = false
 
+[[bench]]
+name = "search_engine_benchmark"
+harness = false
