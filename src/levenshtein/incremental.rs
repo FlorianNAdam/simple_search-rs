@@ -76,7 +76,8 @@ impl IncrementalLevenshtein {
 
         self.query = new_query.to_string();
 
-        let b = &self.data;
+        let a: Vec<char> = self.query.chars().collect();
+        let b: Vec<char> = self.data.chars().collect();
         let len_a = self.query.len();
         let len_b = self.data.len();
 
@@ -84,11 +85,7 @@ impl IncrementalLevenshtein {
 
         for i in (query_similarity + 1)..=len_a {
             for j in 1..=len_b {
-                let cost = if self.query.chars().nth(i - 1) == b.chars().nth(j - 1) {
-                    0
-                } else {
-                    1
-                };
+                let cost = if a.get(i - 1) == b.get(j - 1) { 0 } else { 1 };
 
                 self.matrix[i][j] = std::cmp::min(
                     self.matrix[i - 1][j] + 1,
