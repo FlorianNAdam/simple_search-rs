@@ -28,5 +28,9 @@ name = "levenshtein_benchmark"
 harness = false
 
 [[bench]]
+name = "common_prefix_benchmark"
+harness = false
+
+[[bench]]
 name = "search_engine_benchmark"
 harness = false

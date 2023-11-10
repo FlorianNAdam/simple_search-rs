@@ -289,3 +289,10 @@ pub(crate) fn weighted_edit_similarity_2(matrix: &Vec<Vec<usize>>, a: &str, b: &
         (max_distance as f64 - distance) / max_distance as f64
     }
 }
+
+pub fn common_prefix(a: &str, b: &str) -> usize {
+    a.chars()
+        .zip(b.chars())
+        .take_while(|(c1, c2)| c1 == c2)
+        .count()
+}

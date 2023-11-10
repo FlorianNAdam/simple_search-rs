@@ -11,20 +11,16 @@ pub struct Immutable;
 impl Mutability for Mutable {}
 impl Mutability for Immutable {}
 
-pub struct SearchEngine<Value, Query, S, M: Mutability>
+pub struct SearchEngine<Value, Query: ?Sized, S, M: Mutability>
 where
-    Query: Clone,
     S: Similarity<Value, Query>,
 {
     values: Vec<(S::State, Value)>,
     similarity: S,
-    phantom: PhantomData<(Query, M)>,
+    phantom: PhantomData<(M, Query)>,
 }
 
-impl<Value, Query> SearchEngine<Value, Query, (), Immutable>
-where
-    Query: Clone,
-{
+impl<Value, Query: ?Sized> SearchEngine<Value, Query, (), Immutable> {
     pub fn new() -> SearchEngine<Value, Query, (), Immutable> {
         SearchEngine {
             values: Vec::new(),
@@ -34,9 +30,8 @@ where
     }
 }
 
-impl<Value, Query, S, M: Mutability> SearchEngine<Value, Query, S, M>
+impl<Value, Query: ?Sized, S, M: Mutability> SearchEngine<Value, Query, S, M>
 where
-    Query: Clone,
     S: Similarity<Value, Query>,
 {
     pub fn add_value(&mut self, value: Value) {
@@ -78,7 +73,7 @@ where
         function: Func,
     ) -> SearchEngine<Value, Query, StatelessCombination<Value, Query, S, Func>, M>
     where
-        Func: Fn(&Value, Query) -> f64,
+        Func: Fn(&Value, &Query) -> f64,
     {
         self.with_weight(1., function)
     }
@@ -89,7 +84,7 @@ where
         function: Func,
     ) -> SearchEngine<Value, Query, StatelessCombination<Value, Query, S, Func>, M>
     where
-        Func: Fn(&Value, Query) -> f64,
+        Func: Fn(&Value, &Query) -> f64,
     {
         let similarity = self.similarity.with_weight(weight, function);
         SearchEngine {
@@ -110,7 +105,7 @@ where
         Mutable,
     >
     where
-        Func: Fn(&mut State, &Value, Query) -> f64,
+        Func: Fn(&mut State, &Value, &Query) -> f64,
         StateFunc: Fn(&Value) -> State,
     {
         self.with_state_and_weight(1., state_func, function)
@@ -128,7 +123,7 @@ where
         Mutable,
     >
     where
-        Func: Fn(&mut State, &Value, Query) -> f64,
+        Func: Fn(&mut State, &Value, &Query) -> f64,
         StateFunc: Fn(&Value) -> State,
     {
         let similarity = self
@@ -146,14 +141,12 @@ where
         }
     }
 
-    pub fn into_similarities(self, query: Query) -> Vec<(Value, f64)> {
+    pub fn into_similarities(self, query: &Query) -> Vec<(Value, f64)> {
         let mut values = self
             .values
             .into_iter()
             .map(|(mut state, value)| {
-                let similarity = self
-                    .similarity
-                    .similarity(&mut state, &value, query.clone());
+                let similarity = self.similarity.similarity(&mut state, &value, query);
                 (value, similarity)
             })
             .collect::<Vec<_>>();
@@ -161,26 +154,25 @@ where
         values
     }
 
-    pub fn into_search(self, query: Query) -> Vec<Value> {
+    pub fn into_search(self, query: &Query) -> Vec<Value> {
         self.into_similarities(query)
             .into_iter()
             .map(|v| v.0)
             .collect()
     }
 }
-impl<Value, Query, S> SearchEngine<Value, Query, S, Mutable>
+impl<Value, Query: ?Sized, S> SearchEngine<Value, Query, S, Mutable>
 where
-    Query: Clone,
     S: Similarity<Value, Query>,
 {
-    pub fn similarities(&mut self, query: Query) -> Vec<(&Value, f64)> {
+    pub fn similarities(&mut self, query: &Query) -> Vec<(&Value, f64)> {
         let mut values = self
             .values
             .iter_mut()
             .map(|(state, value)| {
                 (
                     value as &Value,
-                    self.similarity.similarity(state, value, query.clone()),
+                    self.similarity.similarity(state, value, query),
                 )
             })
             .collect::<Vec<_>>();
@@ -188,24 +180,23 @@ where
         values
     }
 
-    pub fn search(&mut self, query: Query) -> Vec<&Value> {
+    pub fn search(&mut self, query: &Query) -> Vec<&Value> {
         self.similarities(query).into_iter().map(|v| v.0).collect()
     }
 }
 
-impl<Value, Query, S> SearchEngine<Value, Query, S, Immutable>
+impl<Value, Query: ?Sized, S> SearchEngine<Value, Query, S, Immutable>
 where
-    Query: Clone,
     S: Similarity<Value, Query, State = ()>,
 {
-    pub fn similarities(&self, query: Query) -> Vec<(&Value, f64)> {
+    pub fn similarities(&self, query: &Query) -> Vec<(&Value, f64)> {
         let mut values = self
             .values
             .iter()
             .map(|(state, value)| {
                 (
                     value as &Value,
-                    self.similarity.similarity(&mut (), value, query.clone()),
+                    self.similarity.similarity(&mut (), value, query),
                 )
             })
             .collect::<Vec<_>>();
@@ -213,27 +204,25 @@ where
         values
     }
 
-    pub fn search(&self, query: Query) -> Vec<&Value> {
+    pub fn search(&self, query: &Query) -> Vec<&Value> {
         self.similarities(query).into_iter().map(|v| v.0).collect()
     }
 }
 
 #[cfg(feature = "rayon")]
-impl<Value, Query, S, M: Mutability> SearchEngine<Value, Query, S, M>
+impl<Value, Query: ?Sized, S, M: Mutability> SearchEngine<Value, Query, S, M>
 where
     Value: Send + Sync,
-    Query: Clone + Send + Sync,
+    Query: Send + Sync,
     S: Similarity<Value, Query> + Send + Sync,
     S::State: Send + Sync,
 {
-    pub fn into_par_similarities(self, query: Query) -> Vec<(Value, f64)> {
+    pub fn into_par_similarities(self, query: &Query) -> Vec<(Value, f64)> {
         let mut values = self
             .values
             .into_par_iter()
             .map(|(mut state, value)| {
-                let similarity = self
-                    .similarity
-                    .similarity(&mut state, &value, query.clone());
+                let similarity = self.similarity.similarity(&mut state, &value, query);
                 (value, similarity)
             })
             .collect::<Vec<_>>();
@@ -241,7 +230,7 @@ where
         values
     }
 
-    pub fn into_par_search(self, query: Query) -> Vec<Value> {
+    pub fn into_par_search(self, query: &Query) -> Vec<Value> {
         self.into_par_similarities(query)
             .into_iter()
             .map(|v| v.0)
@@ -250,21 +239,21 @@ where
 }
 
 #[cfg(feature = "rayon")]
-impl<Value, Query, S> SearchEngine<Value, Query, S, Mutable>
+impl<Value, Query: ?Sized, S> SearchEngine<Value, Query, S, Mutable>
 where
     Value: Send + Sync,
-    Query: Clone + Send + Sync,
+    Query: Send + Sync,
     S: Similarity<Value, Query> + Send + Sync,
     S::State: Send + Sync,
 {
-    pub fn par_similarities(&mut self, query: Query) -> Vec<(&Value, f64)> {
+    pub fn par_similarities(&mut self, query: &Query) -> Vec<(&Value, f64)> {
         let mut values = self
             .values
             .par_iter_mut()
             .map(|(state, value)| {
                 (
                     value as &Value,
-                    self.similarity.similarity(state, value, query.clone()),
+                    self.similarity.similarity(state, value, query),
                 )
             })
             .collect::<Vec<_>>();
@@ -272,7 +261,7 @@ where
         values
     }
 
-    pub fn par_search(&mut self, query: Query) -> Vec<&Value> {
+    pub fn par_search(&mut self, query: &Query) -> Vec<&Value> {
         self.par_similarities(query)
             .into_iter()
             .map(|v| v.0)
@@ -281,29 +270,24 @@ where
 }
 
 #[cfg(feature = "rayon")]
-impl<Value, Query, S> SearchEngine<Value, Query, S, Immutable>
+impl<Value, Query: ?Sized, S> SearchEngine<Value, Query, S, Immutable>
 where
     Value: Send + Sync,
-    Query: Clone + Send + Sync,
+    Query: Send + Sync,
     S: Similarity<Value, Query, State = ()> + Send + Sync,
     S::State: Send + Sync,
 {
-    pub fn par_similarities(&self, query: Query) -> Vec<(&Value, f64)> {
+    pub fn par_similarities(&self, query: &Query) -> Vec<(&Value, f64)> {
         let mut values = self
             .values
             .par_iter()
-            .map(|(_, value)| {
-                (
-                    value,
-                    self.similarity.similarity(&mut (), value, query.clone()),
-                )
-            })
+            .map(|(_, value)| (value, self.similarity.similarity(&mut (), value, query)))
             .collect::<Vec<_>>();
         values.sort_unstable_by(|(_, v), (_, s)| v.partial_cmp(s).unwrap_or(Ordering::Equal));
         values
     }
 
-    pub fn par_search(&self, query: Query) -> Vec<&Value> {
+    pub fn par_search(&self, query: &Query) -> Vec<&Value> {
         self.par_similarities(query)
             .into_iter()
             .map(|v| v.0)

@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
-pub struct StatelessCombination<Value, Query, Inner, Func>
+pub struct StatelessCombination<Value, Query: ?Sized, Inner, Func>
 where
-    Query: Clone,
-    Func: Fn(&Value, Query) -> f64,
+    Func: Fn(&Value, &Query) -> f64,
     Inner: Similarity<Value, Query>,
 {
     weight: f64,
@@ -12,10 +11,9 @@ where
     phantom: PhantomData<(Value, Query)>,
 }
 
-pub struct StatefulCombination<Value, Query, Inner, Func, StateFunc, State>
+pub struct StatefulCombination<Value, Query: ?Sized, Inner, Func, StateFunc, State>
 where
-    Query: Clone,
-    Func: Fn(&mut State, &Value, Query) -> f64,
+    Func: Fn(&mut State, &Value, &Query) -> f64,
     StateFunc: Fn(&Value) -> State,
     Inner: Similarity<Value, Query>,
 {
@@ -23,22 +21,19 @@ where
     function: Func,
     state_func: StateFunc,
     inner: Inner,
-    phantom: PhantomData<(Value, Query, State)>,
+    phantom: PhantomData<(Value, State, Query)>,
 }
 
-pub trait Similarity<Value, Query>
-where
-    Query: Clone,
-{
+pub trait Similarity<Value, Query: ?Sized> {
     type State;
 
     fn state(&self, value: &Value) -> Self::State;
 
-    fn similarity(&self, state: &mut Self::State, value: &Value, query: Query) -> f64;
+    fn similarity<'b>(&self, state: &mut Self::State, value: &Value, query: &'b Query) -> f64;
 
     fn with<Func>(self, func: Func) -> StatelessCombination<Value, Query, Self, Func>
     where
-        Func: Fn(&Value, Query) -> f64,
+        Func: Fn(&Value, &Query) -> f64,
         Self: Sized,
     {
         self.with_weight(1., func)
@@ -50,7 +45,7 @@ where
         func: Func,
     ) -> StatelessCombination<Value, Query, Self, Func>
     where
-        Func: Fn(&Value, Query) -> f64,
+        Func: Fn(&Value, &Query) -> f64,
         Self: Sized,
     {
         StatelessCombination {
@@ -67,7 +62,7 @@ where
         state_func: StateFunc,
     ) -> StatefulCombination<Value, Query, Self, Func, StateFunc, State>
     where
-        Func: Fn(&mut State, &Value, Query) -> f64,
+        Func: Fn(&mut State, &Value, &Query) -> f64,
         StateFunc: Fn(&Value) -> State,
         Self: Sized,
     {
@@ -81,7 +76,7 @@ where
         state_func: StateFunc,
     ) -> StatefulCombination<Value, Query, Self, Func, StateFunc, State>
     where
-        Func: Fn(&mut State, &Value, Query) -> f64,
+        Func: Fn(&mut State, &Value, &Query) -> f64,
         StateFunc: Fn(&Value) -> State,
         Self: Sized,
     {
@@ -95,26 +90,22 @@ where
     }
 }
 
-impl<Value, Query> Similarity<Value, Query> for ()
-where
-    Query: Clone,
-{
+impl<Value, Query: ?Sized> Similarity<Value, Query> for () {
     type State = ();
 
     fn state(&self, _value: &Value) -> Self::State {
         ()
     }
 
-    fn similarity(&self, _state: &mut Self::State, _value: &Value, _query: Query) -> f64 {
+    fn similarity<'b>(&self, _state: &mut Self::State, _value: &Value, _query: &'b Query) -> f64 {
         0.
     }
 }
 
-impl<Value, Query, Inner, Func, StateFunc, State> Similarity<Value, Query>
+impl<Value, Query: ?Sized, Inner, Func, StateFunc, State> Similarity<Value, Query>
     for StatefulCombination<Value, Query, Inner, Func, StateFunc, State>
 where
-    Query: Clone,
-    Func: Fn(&mut State, &Value, Query) -> f64,
+    Func: Fn(&mut State, &Value, &Query) -> f64,
     StateFunc: Fn(&Value) -> State,
     Inner: Similarity<Value, Query>,
 {
@@ -124,7 +115,7 @@ where
         ((self.state_func)(value), self.inner.state(value))
     }
 
-    fn similarity(&self, state: &mut Self::State, value: &Value, query: Query) -> f64 {
+    fn similarity<'b>(&self, state: &mut Self::State, value: &Value, query: &'b Query) -> f64 {
         let (state, inner_state) = (&mut state.0, &mut state.1);
 
         let similarity = (self.function)(state, value, query.clone()) * self.weight;
@@ -134,11 +125,10 @@ where
     }
 }
 
-impl<Value, Query, Inner, Func> Similarity<Value, Query>
+impl<Value, Query: ?Sized, Inner, Func> Similarity<Value, Query>
     for StatelessCombination<Value, Query, Inner, Func>
 where
-    Query: Clone,
-    Func: Fn(&Value, Query) -> f64,
+    Func: Fn(&Value, &Query) -> f64,
     Inner: Similarity<Value, Query>,
 {
     type State = Inner::State;
@@ -147,8 +137,8 @@ where
         self.inner.state(value)
     }
 
-    fn similarity(&self, state: &mut Self::State, value: &Value, query: Query) -> f64 {
-        let similarity = (self.function)(value, query.clone()) * self.weight;
+    fn similarity<'b>(&self, state: &mut Self::State, value: &Value, query: &'b Query) -> f64 {
+        let similarity = (self.function)(value, query) * self.weight;
         let inner_similarity = self.inner.similarity(state, value, query);
 
         similarity.max(inner_similarity)

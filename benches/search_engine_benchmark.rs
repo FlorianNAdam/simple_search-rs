@@ -20,10 +20,10 @@ fn bench_search_engine_overhead(c: &mut Criterion) {
 
     let granular = granular::search_engine::SearchEngine::new()
         .with_values(data.clone())
-        .with(|v, q: &&str| weighted_levenshtein_similarity(v, q));
-    // let stateless = stateless::search_engine::SearchEngine::new()
-    //     .with_values(data.clone())
-    //     .with_key_fn(|v, q: &&str| weighted_levenshtein_similarity(v, q));
+        .with(|v, q| weighted_levenshtein_similarity(v, q));
+    let stateless = stateless::search_engine::SearchEngine::new()
+        .with_values(data.clone())
+        .with_key_fn(|v, q| weighted_levenshtein_similarity(v, q));
     // let mut stateful = stateful::search_engine::SearchEngine::new::<()>()
     //     .with_values(data.clone())
     //     .with_key_fn(|_, v, q: &&str| weighted_levenshtein_similarity(v, q));
@@ -40,16 +40,15 @@ fn bench_search_engine_overhead(c: &mut Criterion) {
         // granular
         group.bench_function(BenchmarkId::new("Granular", i), |b| {
             b.iter(|| {
-                let query = query.clone();
-                granular.similarities(&(query.as_str()));
+                granular.similarities(&query);
             })
         });
 
-        // // stateless
-        // group.bench_function(BenchmarkId::new("Stateless", i), |b| {
-        //     b.iter(|| stateless.similarities(&query))
-        // });
-        //
+        // stateless
+        group.bench_function(BenchmarkId::new("Stateless", i), |b| {
+            b.iter(|| stateless.similarities(&query))
+        });
+
         // // stateful
         // group.bench_function(BenchmarkId::new("Stateful", i), |b| {
         //     b.iter_with_setup(
@@ -60,11 +59,11 @@ fn bench_search_engine_overhead(c: &mut Criterion) {
         //     )
         // });
 
-        // let granular_similarity = granular.similarities(&query);
-        // let stateless_similarity = stateless.similarities(&query);
+        let granular_similarity = granular.similarities(&query);
+        let stateless_similarity = stateless.similarities(&query);
         // let stateful_similarity = stateful.similarities(&query);
 
-        // assert_eq!(granular_similarity, stateless_similarity);
+        assert_eq!(granular_similarity, stateless_similarity);
         // assert_eq!(granular_similarity, stateful_similarity);
     }
     group.finish();

@@ -9,14 +9,14 @@ use rayon::prelude::*;
 
 /// A generic struct for performing similarity-based searches.
 /// This `SearchEngine` allows for building a stateless search engine using the builder pattern.
-pub struct SearchEngine<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> {
+pub struct SearchEngine<V, Q: ?Sized, S: Similarity<V, Q>> {
     values: Vec<V>,
     similarity: S,
-    phantom: PhantomData<&'a Q>,
+    phantom: PhantomData<Q>,
 }
 
-impl<'a, Q: ?Sized, V> SearchEngine<'a, V, Q, ()> {
-    pub fn new() -> SearchEngine<'a, V, Q, ()> {
+impl<Q: ?Sized, V> SearchEngine<V, Q, ()> {
+    pub fn new() -> SearchEngine<V, Q, ()> {
         SearchEngine {
             values: Vec::new(),
             similarity: (),
@@ -25,7 +25,7 @@ impl<'a, Q: ?Sized, V> SearchEngine<'a, V, Q, ()> {
     }
 }
 
-impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
+impl<V, Q: ?Sized, S: Similarity<V, Q>> SearchEngine<V, Q, S> {
     /// Adds a single value to the search engine.
     ///
     /// # Arguments
@@ -82,7 +82,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
         self,
         weight: f64,
         function: F,
-    ) -> SearchEngine<'a, V, Q, Combination<'a, V, Q, F, S>> {
+    ) -> SearchEngine<V, Q, Combination<V, Q, F, S>> {
         let similarity = self.similarity.combine_weighted(weight, function);
         SearchEngine {
             values: self.values,
@@ -100,7 +100,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
     pub fn with_key_fn<F: Fn(&V, &Q) -> f64>(
         self,
         function: F,
-    ) -> SearchEngine<'a, V, Q, Combination<'a, V, Q, F, S>> {
+    ) -> SearchEngine<V, Q, Combination<V, Q, F, S>> {
         self.with_key_fn_weighted(1., function)
     }
 
@@ -115,7 +115,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
     ///
     /// Returns a vector of tuples where the first element is a reference to a value and the second element
     /// is its similarity score as a floating-point number.
-    pub fn similarities<'b>(&'a self, query: &'b Q) -> Vec<(&'a V, f64)> {
+    pub fn similarities(&self, query: &Q) -> Vec<(&V, f64)> {
         let mut values = self
             .values
             .iter()
@@ -135,7 +135,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
     /// # Returns
     ///
     /// Returns a vector of references to the values ranked by their similarity to the query.
-    pub fn search<'b>(&'a self, query: &'b Q) -> Vec<&'a V> {
+    pub fn search(&self, query: &Q) -> Vec<&V> {
         self.similarities(query).into_iter().map(|v| v.0).collect()
     }
 
@@ -150,7 +150,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
     ///
     /// Returns a vector of tuples where the first element is a reference to a value and the second element
     /// is its similarity score as a floating-point number.
-    pub fn into_similarities(self, query: &'a Q) -> Vec<(V, f64)> {
+    pub fn into_similarities(self, query: &Q) -> Vec<(V, f64)> {
         let mut values = self
             .values
             .into_iter()
@@ -173,7 +173,7 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
     /// # Returns
     ///
     /// Returns a vector of references to the values ranked by their similarity to the query.
-    pub fn into_search(self, query: &'a Q) -> Vec<V> {
+    pub fn into_search(self, query: &Q) -> Vec<V> {
         self.into_similarities(query)
             .into_iter()
             .map(|v| v.0)
@@ -182,13 +182,13 @@ impl<'a, V, Q: ?Sized, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S> {
 }
 
 #[cfg(feature = "rayon")]
-impl<'a, Q, V, S: Similarity<'a, V, Q>> SearchEngine<'a, V, Q, S>
+impl<Q, V, S: Similarity<V, Q>> SearchEngine<V, Q, S>
 where
     Q: Send + Sync,
     V: Send + Sync,
     S: Clone + Send + Sync,
 {
-    pub fn par_similarities(&self, query: &'a Q) -> Vec<(&V, f64)> {
+    pub fn par_similarities(&self, query: &Q) -> Vec<(&V, f64)> {
         let mut values = self
             .values
             .par_iter()
@@ -198,14 +198,14 @@ where
         values
     }
 
-    pub fn par_search(&self, query: &'a Q) -> Vec<&V> {
+    pub fn par_search(&self, query: &Q) -> Vec<&V> {
         self.par_similarities(query)
             .into_iter()
             .map(|v| v.0)
             .collect()
     }
 
-    pub fn into_par_similarities(self, query: &'a Q) -> Vec<(V, f64)> {
+    pub fn into_par_similarities(self, query: &Q) -> Vec<(V, f64)> {
         let mut values = self
             .values
             .into_par_iter()
@@ -218,7 +218,7 @@ where
         values
     }
 
-    pub fn into_par_search(self, query: &'a Q) -> Vec<V> {
+    pub fn into_par_search(self, query: &Q) -> Vec<V> {
         self.into_par_similarities(query)
             .into_iter()
             .map(|v| v.0)

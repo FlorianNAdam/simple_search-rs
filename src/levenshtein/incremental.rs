@@ -43,15 +43,11 @@ impl IncrementalLevenshtein {
     ///
     /// A `usize` value indicating the count of identical leading characters.
     fn query_similarity(&mut self, new_query: &str) -> usize {
-        let mut identical = 0;
-        for (new, old) in self.query.chars().zip(new_query.chars()) {
-            if new != old {
-                break;
-            } else {
-                identical += 1;
-            }
-        }
-        identical
+        self.query
+            .chars()
+            .zip(new_query.chars())
+            .take_while(|(c1, c2)| c1 == c2)
+            .count()
     }
 
     /// Updates the Levenshtein matrix based on the new query string.

@@ -1,16 +1,16 @@
 use std::marker::PhantomData;
 
-pub struct Combination<'a, V, Q: ?Sized, F: FnMut(&V, &Q) -> f64, S: Similarity<'a, V, Q>> {
+pub struct Combination<V, Q: ?Sized, F: FnMut(&V, &Q) -> f64, S: Similarity<V, Q>> {
     weight: f64,
     function: F,
     inner: S,
-    phantom: PhantomData<(V, &'a Q)>,
+    phantom: PhantomData<(V, Q)>,
 }
 
-pub trait Similarity<'a, V, Q: ?Sized> {
+pub trait Similarity<V, Q: ?Sized> {
     fn similarity<'b>(&self, value: &V, query: &'b Q) -> f64;
 
-    fn combine<F: Fn(&V, &Q) -> f64>(self, function: F) -> Combination<'a, V, Q, F, Self>
+    fn combine<F: Fn(&V, &Q) -> f64>(self, function: F) -> Combination<V, Q, F, Self>
     where
         Self: Sized,
     {
@@ -21,7 +21,7 @@ pub trait Similarity<'a, V, Q: ?Sized> {
         self,
         weight: f64,
         function: F,
-    ) -> Combination<'a, V, Q, F, Self>
+    ) -> Combination<V, Q, F, Self>
     where
         Self: Sized,
     {
@@ -34,8 +34,8 @@ pub trait Similarity<'a, V, Q: ?Sized> {
     }
 }
 
-impl<'a, V, Q: ?Sized, F: Fn(&V, &Q) -> f64 + Clone, S: Similarity<'a, V, Q> + Clone> Clone
-    for Combination<'a, V, Q, F, S>
+impl<V, Q: ?Sized, F: Fn(&V, &Q) -> f64 + Clone, S: Similarity<V, Q> + Clone> Clone
+    for Combination<V, Q, F, S>
 {
     fn clone(&self) -> Self {
         Self {
@@ -47,14 +47,14 @@ impl<'a, V, Q: ?Sized, F: Fn(&V, &Q) -> f64 + Clone, S: Similarity<'a, V, Q> + C
     }
 }
 
-impl<'a, V, Q: ?Sized> Similarity<'a, V, Q> for () {
+impl<V, Q: ?Sized> Similarity<V, Q> for () {
     fn similarity<'b>(&self, _value: &V, _query: &'b Q) -> f64 {
         0.
     }
 }
 
-impl<'a, V, Q: ?Sized, F: Fn(&V, &Q) -> f64, S: Similarity<'a, V, Q>> Similarity<'a, V, Q>
-    for Combination<'a, V, Q, F, S>
+impl<V, Q: ?Sized, F: Fn(&V, &Q) -> f64, S: Similarity<V, Q>> Similarity<V, Q>
+    for Combination<V, Q, F, S>
 {
     fn similarity<'b>(&self, value: &V, query: &'b Q) -> f64 {
         self.inner

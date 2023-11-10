@@ -49,7 +49,7 @@ fn main() {
 
     println!();
 
-    let results = engine.similarities("Fitzgerald");
+    let results = engine.similarities(query.as_str());
 
     let mut query = "Fire and Ice".to_string();
 
