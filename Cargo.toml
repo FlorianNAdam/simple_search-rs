@@ -1,14 +1,12 @@
 [package]
 name = "simple_search"
-version = "0.1.2"
+version = "0.2.0"
 license = "MIT"
 description = "A simple library for searching objects"
 homepage = "https://github.com/FlorianNAdam/simple_search-rs"
 repository = "https://github.com/FlorianNAdam/simple_search-rs"
 readme = "README.md"
 edition = "2021"
-
-
 
 
 [features]
