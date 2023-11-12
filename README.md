@@ -1,41 +1,25 @@
 # simple_search-rs
 
 A simple library for searching objects.
-It is still very work in progress!
-
-## Installation
-
-To include `simple_search` in your project, add the following to your `Cargo.toml`:
-
-```toml
-[dependencies]
-simple_search = "0.1.1"  # Use the latest version
-```
-
-The library supports multithreading, based on `rayon`. To use it, enable the feature `rayon`.
-
-## Example
-
+## Basic Usage
+ ```rust
+ use simple_search::search_engine::SearchEngine;
+ use simple_search::levenshtein::base::weighted_levenshtein_similarity;
+fn main() {
+     let engine = SearchEngine::new()
+         .with_values(vec!["hello", "world", "foo", "bar"])
+         .with(|v, q| weighted_levenshtein_similarity(v, q));
+     let results = engine.search("hallo");
+     println!("search for hallo: {:?}", results);
+}
+ ```
+## Advanced Usage
+The following example shows how to use the library with a custom type.
+The [SearchEngine](simple_search::search_engine::SearchEngine) is configured to search for books by title, author and description.
+Each of those is weighted differently and the [IncrementalLevenshtein](simple_search::levenshtein::incremental::IncrementalLevenshtein) is used to calculate the similarity.
 ```rust
+use simple_search::search_engine::SearchEngine;
 use simple_search::levenshtein::incremental::IncrementalLevenshtein;
-use simple_search::stateful::search_engine::SearchEngine;
-use simple_search::stateful::state::SearchEngineState;
-
-struct BookSimilarityState {
-    title: IncrementalLevenshtein,
-    description: IncrementalLevenshtein,
-    author: IncrementalLevenshtein,
-}
-
-impl SearchEngineState<Book> for BookSimilarityState {
-    fn new(value: &Book) -> Self {
-        Self {
-            title: IncrementalLevenshtein::new("", &value.title),
-            description: IncrementalLevenshtein::new("", &value.description),
-            author: IncrementalLevenshtein::new("", &value.author),
-        }
-    }
-}
 
 #[derive(Debug)]
 struct Book {
@@ -47,51 +31,101 @@ struct Book {
 fn main() {
     let book1 = Book {
         title: "The Winds of Winter".to_string(),
-        description: "The long-awaited sixth book in the A Song of Ice and Fire series, where the fate of Westeros will be decided amidst snow and ice.".to_string(),
+        description: "The sixth book in the A Song of Ice and Fire series.".to_string(),
         author: "George R. R. Martin".to_string(),
     };
-
     let book2 = Book {
         title: "The Great Gatsby".to_string(),
-        description: "A classic novel of the roaring twenties, showcasing the decadence, beauty, and turmoil of the American dream.".to_string(),
+        description: "A classic novel of the roaring twenties.".to_string(),
         author: "F. Scott Fitzgerald".to_string(),
     };
-
     let book3 = Book {
         title: "Brave New World".to_string(),
-        description: "A visionary and disturbing novel about a dystopian future where society is regimented and controlled by the state.".to_string(),
+        description: "A visionary and disturbing novel about a dystopian future.".to_string(),
         author: "Aldous Huxley".to_string(),
     };
-
     let book4 = Book {
         title: "To Kill a Mockingbird".to_string(),
-        description: "A profound novel that deals with serious issues like racial injustice and moral growth through the eyes of a young girl.".to_string(),
+        description: "A novel that deals with issues like injustice and moral growth.".to_string(),
         author: "Harper Lee".to_string(),
     };
-
-    let mut engine = SearchEngine::new::<BookSimilarityState>()
+    
+    let engine = SearchEngine::new()
         .with_values(vec![book1, book2, book3, book4])
-        .with_key_fn(|state, _, query: &str| state.title.similarity(&query))
-        .with_key_fn_weighted(0.5, |state, _, query: &str| {
-            state.description.similarity(&query)
-        })
-        .with_key_fn_weighted(0.7, |state, _, query: &str| state.author.similarity(&query));
-
-    let results = engine.similarities("Fire and Ice");
-
+        .with_state(
+            |book| IncrementalLevenshtein::new("", &book.title),
+            |s, _, q| s.weighted_similarity(q),
+        )
+        .with_state_and_weight(
+            0.8,
+            |book| IncrementalLevenshtein::new("", &book.author),
+            |s, _, q| s.weighted_similarity(q),
+        )
+        .with_state_and_weight(
+            0.5,
+            |book| IncrementalLevenshtein::new("", &book.description),
+            |s, _, q| s.weighted_similarity(q),
+        );
+    
+    let mut engine = engine.erase_type();
+    
+    let results = engine.similarities("Fire adn water");
+    
     println!("search for Fire and Ice:");
     for result in results {
         println!("{:?}", result);
     }
-
+    
     println!();
-
-    let results = engine.similarities("Fitzgerald");
-
-    println!("search for Fitzgerald:");
+    
+    let results = engine.similarities("Fitzereld");
+    
+    println!("Fitzgerald");
     for result in results {
         println!("{:?}", result);
     }
+    
+    println!();
 }
-
 ```
+## Storing an engine
+The [SearchEngine](simple_search::search_engine::SearchEngine) most often has a very complicated type, that can't easily be expressed.
+To work around this, the [type_erasure](simple_search::type_erasure) module provides a way to store the engine, by using a trait object in a [Box](std::boxed::Box). \
+This solution is not ideal, as it requires dynamic dispatch, but the overhead is minimal
+Once the approved [RFC 2515](https://rust-lang.github.io/impl-trait-initiative/RFC.html) is part of stable rust, this will be replaced with a more elegant solution.
+For more details on this see the [type_erasure](simple_search::type_erasure) module.
+```rust
+ use simple_search::search_engine::SearchEngine;
+ use simple_search::levenshtein::incremental::IncrementalLevenshtein;
+ use simple_search::type_erasure::non_cloneable::MutableSearchEngine;
+
+ fn main() {
+     let engine = SearchEngine::new()
+         .with_values(vec!["hello", "world", "foo", "bar"])
+         .with_state(
+                 |v| IncrementalLevenshtein::new("", v),
+                 |s, _, q| s.weighted_similarity(q),
+         );
+     
+     let mut engine: MutableSearchEngine<&str, str> = engine.erase_type();
+     
+     let results = engine.search("hallo");
+     println!("search for hallo: {:?}", results);
+ }
+ ```
+## Parallelization
+The [SearchEngine](simple_search::search_engine::SearchEngine) can be used in parallel, using [rayon](https://docs.rs/rayon/latest/rayon/) iterators.
+This simply involved calling the parallel version of the respective function \
+(As long as the values and query are [Send] + [Sync]).
+ ```rust
+ use simple_search::search_engine::SearchEngine;
+ use simple_search::levenshtein::base::weighted_levenshtein_similarity;
+
+fn main() {
+     let engine = SearchEngine::new()
+         .with_values(vec!["hello", "world", "foo", "bar"])
+         .with(|v, q| weighted_levenshtein_similarity(v, q));
+     let results = engine.par_search("hallo");
+     println!("search for hallo: {:?}", results);
+}
+ ```
