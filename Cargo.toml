@@ -18,6 +18,8 @@ rayon = ["dep:rayon"]
 difflib = "0.4.0"
 rayon = {version="1.7.0", optional = true}
 
+[package.metadata.docs.rs]
+all-features = true
 
 [dev-dependencies]
 criterion = "0.5.1"

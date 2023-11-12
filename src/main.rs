@@ -2,7 +2,7 @@ use simple_search::search_engine::SearchEngine;
 
 use simple_search::levenshtein::incremental::IncrementalLevenshtein;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Book {
     title: String,
     description: String,
@@ -34,7 +34,7 @@ fn main() {
         author: "Harper Lee".to_string(),
     };
 
-    let engine = SearchEngine::new()
+    let mut engine = SearchEngine::new()
         .with_values(vec![book1, book2, book3, book4])
         .with_state(
             |book| IncrementalLevenshtein::new("", &book.title),
@@ -51,9 +51,7 @@ fn main() {
             |s, _, q| s.weighted_similarity(q),
         );
 
-    let mut engine = engine.erase_type();
-
-    let results = engine.similarities("Fire adn water");
+    let results = engine.par_similarities("Fire adn water");
 
     println!("search for Fire and Ice:");
     for result in results {

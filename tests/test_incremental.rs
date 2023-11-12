@@ -37,7 +37,7 @@ mod tests {
 
         let mut query = Alphanumeric.sample_string(&mut rng, 16);
 
-        for i in 0..20 {
+        for _ in 0..20 {
             let addition = Alphanumeric.sample_string(&mut rng, 1);
 
             let index = rng.gen_range(0..=query.len());
@@ -71,11 +71,11 @@ mod tests {
                     );
 
                     let regular_matrix = levenshtein_matrix(&query, key);
-                    let values = incremental.values.clone();
+                    let values = incremental.get_values_with_state();
 
                     let incremental_matrix = values
                         .into_iter()
-                        .find(|(s, v)| v == key)
+                        .find(|(_, v)| v == key)
                         .unwrap()
                         .0
                         .clone();

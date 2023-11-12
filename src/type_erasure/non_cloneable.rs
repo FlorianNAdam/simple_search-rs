@@ -1,3 +1,5 @@
+//! This module provides a band-aid solution for storing non-cloneable engines with erased types.
+
 use crate::search_engine::{Immutable, Mutable, SearchEngine};
 use crate::similarity::Similarity;
 
@@ -32,6 +34,7 @@ trait ImmutableSearchEngineTrait<Value, Query: ?Sized> {
 
     fn search_wrapper(&self, query: &Query) -> Vec<&Value>;
 }
+
 trait MutableSearchEngineTrait<Value, Query: ?Sized> {
     fn similarities_wrapper(&mut self, query: &Query) -> Vec<(&Value, f64)>;
 
@@ -66,6 +69,7 @@ where
     }
 }
 
+/// Wrapper struct for type erased search engines not requiring mutable access due to being stateless.
 pub struct ImmutableSearchEngine<Value, Query: ?Sized> {
     engine: Box<dyn ImmutableSearchEngineTrait<Value, Query>>,
 }
@@ -80,6 +84,7 @@ impl<Value, Query: ?Sized> ImmutableSearchEngine<Value, Query> {
     }
 }
 
+/// Wrapper struct for type erased search engines requiring mutable access due to being stateful.
 pub struct MutableSearchEngine<Value, Query: ?Sized> {
     engine: Box<dyn MutableSearchEngineTrait<Value, Query>>,
 }

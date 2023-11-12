@@ -1,3 +1,7 @@
+//! This module provides structs and traits for evaluating the similarity of a value and the query.
+//!
+//! The builder pattern is used to combine multiple similarity functions and optionally states.
+
 use std::marker::PhantomData;
 
 pub struct StatelessCombination<Value, Query: ?Sized, Inner, Func>
