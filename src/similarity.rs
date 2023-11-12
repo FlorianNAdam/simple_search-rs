@@ -118,7 +118,7 @@ where
     fn similarity<'b>(&self, state: &mut Self::State, value: &Value, query: &'b Query) -> f64 {
         let (state, inner_state) = (&mut state.0, &mut state.1);
 
-        let similarity = (self.function)(state, value, query.clone()) * self.weight;
+        let similarity = (self.function)(state, value, query) * self.weight;
         let inner_similarity = self.inner.similarity(inner_state, value, query);
 
         similarity.max(inner_similarity)
@@ -142,5 +142,38 @@ where
         let inner_similarity = self.inner.similarity(state, value, query);
 
         similarity.max(inner_similarity)
+    }
+}
+
+impl<Value, Query: ?Sized, Inner, Func, StateFunc, State> Clone
+    for StatefulCombination<Value, Query, Inner, Func, StateFunc, State>
+where
+    Func: Fn(&mut State, &Value, &Query) -> f64 + Clone,
+    StateFunc: Fn(&Value) -> State + Clone,
+    Inner: Similarity<Value, Query> + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            weight: self.weight,
+            function: self.function.clone(),
+            state_func: self.state_func.clone(),
+            inner: self.inner.clone(),
+            phantom: Default::default(),
+        }
+    }
+}
+
+impl<Value, Query: ?Sized, Inner, Func> Clone for StatelessCombination<Value, Query, Inner, Func>
+where
+    Func: Fn(&Value, &Query) -> f64 + Clone,
+    Inner: Similarity<Value, Query> + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            weight: self.weight,
+            function: self.function.clone(),
+            inner: self.inner.clone(),
+            phantom: Default::default(),
+        }
     }
 }

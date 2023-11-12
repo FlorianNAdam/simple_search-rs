@@ -1,4 +1,4 @@
-pub mod granular;
 pub mod levenshtein;
-pub mod stateful;
-pub mod stateless;
+pub mod search_engine;
+pub mod similarity;
+pub mod type_erasure;

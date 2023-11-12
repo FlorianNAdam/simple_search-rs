@@ -1,7 +1,7 @@
-use crate::granular::similarity::{Similarity, StatefulCombination, StatelessCombination};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 
+use crate::similarity::{Similarity, StatefulCombination, StatelessCombination};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
@@ -15,7 +15,7 @@ pub struct SearchEngine<Value, Query: ?Sized, S, M: Mutability>
 where
     S: Similarity<Value, Query>,
 {
-    values: Vec<(S::State, Value)>,
+    pub values: Vec<(S::State, Value)>,
     similarity: S,
     phantom: PhantomData<(M, Query)>,
 }
@@ -132,7 +132,7 @@ where
         let values: Vec<_> = self
             .values
             .into_iter()
-            .map(|(state, value)| (similarity.state(&value), value))
+            .map(|(_, value)| (similarity.state(&value), value))
             .collect();
         SearchEngine {
             values,
@@ -193,12 +193,7 @@ where
         let mut values = self
             .values
             .iter()
-            .map(|(state, value)| {
-                (
-                    value as &Value,
-                    self.similarity.similarity(&mut (), value, query),
-                )
-            })
+            .map(|(_, value)| (value, self.similarity.similarity(&mut (), value, query)))
             .collect::<Vec<_>>();
         values.sort_unstable_by(|(_, v), (_, s)| v.partial_cmp(s).unwrap_or(Ordering::Equal));
         values
@@ -206,6 +201,21 @@ where
 
     pub fn search(&self, query: &Query) -> Vec<&Value> {
         self.similarities(query).into_iter().map(|v| v.0).collect()
+    }
+}
+
+impl<Value, Query: ?Sized, S, M: Mutability> Clone for SearchEngine<Value, Query, S, M>
+where
+    Value: Clone,
+    S::State: Clone,
+    S: Similarity<Value, Query> + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            values: self.values.clone(),
+            similarity: self.similarity.clone(),
+            phantom: Default::default(),
+        }
     }
 }
 
