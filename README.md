@@ -1,22 +1,25 @@
-# simple_search-rs
+# simple_search
 
 A simple library for searching objects.
 ## Basic Usage
  ```rust
  use simple_search::search_engine::SearchEngine;
  use simple_search::levenshtein::base::weighted_levenshtein_similarity;
+
 fn main() {
      let engine = SearchEngine::new()
          .with_values(vec!["hello", "world", "foo", "bar"])
          .with(|v, q| weighted_levenshtein_similarity(v, q));
+
      let results = engine.search("hallo");
+
      println!("search for hallo: {:?}", results);
 }
  ```
 ## Advanced Usage
 The following example shows how to use the library with a custom type.
-The [SearchEngine](simple_search::search_engine::SearchEngine) is configured to search for books by title, author and description.
-Each of those is weighted differently and the [IncrementalLevenshtein](simple_search::levenshtein::incremental::IncrementalLevenshtein) is used to calculate the similarity.
+The SearchEngine is configured to search for books by title, author and description.
+Each of those is weighted differently and the IncrementalLevenshtein is used to calculate the similarity.
 ```rust
 use simple_search::search_engine::SearchEngine;
 use simple_search::levenshtein::incremental::IncrementalLevenshtein;
@@ -66,12 +69,10 @@ fn main() {
             |book| IncrementalLevenshtein::new("", &book.description),
             |s, _, q| s.weighted_similarity(q),
         );
-    
-    let mut engine = engine.erase_type();
-    
+
     let results = engine.similarities("Fire adn water");
     
-    println!("search for Fire and Ice:");
+    println!("search for Fire adn water:");
     for result in results {
         println!("{:?}", result);
     }
@@ -80,7 +81,7 @@ fn main() {
     
     let results = engine.similarities("Fitzereld");
     
-    println!("Fitzgerald");
+    println!("Fitzereld");
     for result in results {
         println!("{:?}", result);
     }
@@ -89,11 +90,11 @@ fn main() {
 }
 ```
 ## Storing an engine
-The [SearchEngine](simple_search::search_engine::SearchEngine) most often has a very complicated type, that can't easily be expressed.
-To work around this, the [type_erasure](simple_search::type_erasure) module provides a way to store the engine, by using a trait object in a [Box](std::boxed::Box). \
+The SearchEngine most often has a very complicated type, that can't easily be expressed.
+To work around this, the type_erasure module provides a way to store the engine, by using a trait object in a [Box](std::boxed::Box). \
 This solution is not ideal, as it requires dynamic dispatch, but the overhead is minimal
 Once the approved [RFC 2515](https://rust-lang.github.io/impl-trait-initiative/RFC.html) is part of stable rust, this will be replaced with a more elegant solution.
-For more details on this see the [type_erasure](simple_search::type_erasure) module.
+For more details on this see the type_erasure module.
 ```rust
  use simple_search::search_engine::SearchEngine;
  use simple_search::levenshtein::incremental::IncrementalLevenshtein;
@@ -114,9 +115,9 @@ For more details on this see the [type_erasure](simple_search::type_erasure) mod
  }
  ```
 ## Parallelization
-The [SearchEngine](simple_search::search_engine::SearchEngine) can be used in parallel, using [rayon](https://docs.rs/rayon/latest/rayon/) iterators.
+The SearchEngine can be used in parallel, using [rayon](https://docs.rs/rayon/latest/rayon/) iterators.
 This simply involved calling the parallel version of the respective function \
-(As long as the values and query are [Send] + [Sync]).
+(As long as the values and query are Send + Sync).
  ```rust
  use simple_search::search_engine::SearchEngine;
  use simple_search::levenshtein::base::weighted_levenshtein_similarity;
@@ -125,7 +126,9 @@ fn main() {
      let engine = SearchEngine::new()
          .with_values(vec!["hello", "world", "foo", "bar"])
          .with(|v, q| weighted_levenshtein_similarity(v, q));
+    
      let results = engine.par_search("hallo");
+    
      println!("search for hallo: {:?}", results);
 }
  ```

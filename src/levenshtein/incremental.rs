@@ -1,4 +1,4 @@
-//! This module provides the `IncrementalLevenshtein` struct which is designed for
+//! This module provides the [`IncrementalLevenshtein`] struct which is designed for
 //! efficiently computing Levenshtein distances and similarity scores for scenarios where
 //! the 'query' string is subject to incremental changes.
 

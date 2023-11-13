@@ -18,8 +18,8 @@
 //!
 //! # Advanced Usage
 //! The following example shows how to use the library with a custom type.
-//! The [SearchEngine](simple_search::search_engine::SearchEngine) is configured to search for books by title, author and description.
-//! Each of those is weighted differently and the [IncrementalLevenshtein](simple_search::levenshtein::incremental::IncrementalLevenshtein) is used to calculate the similarity.
+//! The [`SearchEngine`](crate::search_engine::SearchEngine) is configured to search for books by title, author and description.
+//! Each of those is weighted differently and the [`IncrementalLevenshtein`](crate::levenshtein::incremental::IncrementalLevenshtein) is used to calculate the similarity.
 //!
 //!```rust
 //!use simple_search::search_engine::SearchEngine;
@@ -57,7 +57,7 @@
 //!        author: "Harper Lee".to_string(),
 //!    };
 //!
-//!    let engine = SearchEngine::new()
+//!    let mut engine = SearchEngine::new()
 //!        .with_values(vec![book1, book2, book3, book4])
 //!        .with_state(
 //!            |book| IncrementalLevenshtein::new("", &book.title),
@@ -74,11 +74,9 @@
 //!            |s, _, q| s.weighted_similarity(q),
 //!        );
 //!
-//!    let mut engine = engine.erase_type();
-//!
 //!    let results = engine.similarities("Fire adn water");
 //!
-//!    println!("search for Fire and Ice:");
+//!    println!("search for Fire adn water:");
 //!    for result in results {
 //!        println!("{:?}", result);
 //!    }
@@ -87,7 +85,7 @@
 //!
 //!    let results = engine.similarities("Fitzereld");
 //!
-//!    println!("Fitzgerald");
+//!    println!("Fitzereld");
 //!    for result in results {
 //!        println!("{:?}", result);
 //!    }
@@ -98,11 +96,11 @@
 //!
 //! # Storing an engine
 //!
-//! The [SearchEngine](simple_search::search_engine::SearchEngine) most often has a very complicated type, that can't easily be expressed.
-//! To work around this, the [type_erasure](simple_search::type_erasure) module provides a way to store the engine, by using a trait object in a [Box](std::boxed::Box). \
+//! The [`SearchEngine`](crate::search_engine::SearchEngine) most often has a very complicated type, that can't easily be expressed.
+//! To work around this, the [`type_erasure`](crate::type_erasure) module provides a way to store the engine, by using a trait object in a [Box](std::boxed::Box). \
 //! This solution is not ideal, as it requires dynamic dispatch, but the overhead is minimal
 //! Once the approved [RFC 2515](https://rust-lang.github.io/impl-trait-initiative/RFC.html) is part of stable rust, this will be replaced with a more elegant solution.
-//! For more details on this see the [type_erasure](simple_search::type_erasure) module.
+//! For more details on this see the [`type_erasure`](crate::type_erasure) module.
 //!
 //!```rust
 //! use simple_search::search_engine::SearchEngine;
@@ -127,7 +125,7 @@
 //!
 //! # Parallelization
 //!
-//! The [SearchEngine](simple_search::search_engine::SearchEngine) can be used in parallel, using [rayon](https://docs.rs/rayon/latest/rayon/) iterators.
+//! The [`SearchEngine`](crate::search_engine::SearchEngine) can be used in parallel, using [rayon](https://docs.rs/rayon/latest/rayon/) iterators.
 //! This simply involved calling the parallel version of the respective function \
 //! (As long as the values and query are [Send] + [Sync]).
 //!
@@ -148,5 +146,7 @@
 
 pub mod levenshtein;
 pub mod search_engine;
+
+#[doc(hidden)]
 pub mod similarity;
 pub mod type_erasure;

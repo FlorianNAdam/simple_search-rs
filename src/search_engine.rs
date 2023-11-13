@@ -1,4 +1,4 @@
-//! This module provides a generic `SearchEngine` struct for building a search engine using the builder pattern.
+//! This module provides a generic [`SearchEngine`] struct for building a search engine using the builder pattern.
 
 use std::cmp::Ordering;
 use std::marker::PhantomData;
@@ -24,11 +24,29 @@ impl Mutability for Immutable {}
 
 /// A generic struct for performing similarity-based searches.
 ///
-/// This `SearchEngine` allows for building a search engine using the builder pattern.
+/// This [`SearchEngine`] allows for building a search engine using the builder pattern.
 ///
 /// Multiple similarity functions can be combined using the builder pattern. \
 /// The similarity is determined by the maximum of the individual similarities weighted by the weight of the respective function. \
 /// Similarity functions can be stateless or stateful.
+///
+/// A stateless similarity function is a function that only depends on the value and the query, such as: \
+/// ```rust
+/// |value: &str, query: &str | value.len() as f64 / query.len() as f64;
+/// ```
+///
+/// A stateful similarity function is a function that depends on the value, the query and a state bound to every value, such as: \
+/// ```rust
+/// |state: &mut usize, value: &str, query: &str | {
+///    *state += 1;
+///   value.len() as f64 / query.len() as f64 / *state as f64;
+/// };
+/// ```
+/// This can be used to for example to cache past searches or reuse previous calculations. \
+/// For example the [IncrementalLevenshtein](crate::levenshtein::incremental::IncrementalLevenshtein)
+/// struct can be used to massively speed up calculating the similarity to slightly modified queries.
+///
+/// If a search engine contains no stateful function, the search and similarity functions can be used immutably.
 ///
 pub struct SearchEngine<Value, Query: ?Sized, S, M: Mutability>
 where
@@ -259,7 +277,8 @@ where
     S: Similarity<Value, Query>,
 {
     /// Retrieves a sorted vector of tuples containing references to the values and their similarity scores
-    /// to the given query.
+    /// to the given query. \
+    /// This version of the function is used, if the search engine contains stateful functions.
     ///
     /// # Arguments
     ///
@@ -285,7 +304,8 @@ where
     }
 
     /// Performs a search based on the given query and returns a vector of references to the values ranked
-    /// by similarity.
+    /// by similarity. \
+    /// This version of the function is used, if the search engine contains stateful functions.
     ///
     /// # Arguments
     ///
@@ -304,7 +324,8 @@ where
     S: Similarity<Value, Query, State = ()>,
 {
     /// Retrieves a sorted vector of tuples containing references to the values and their similarity scores
-    /// to the given query.
+    /// to the given query. \
+    /// This version of the function is used, if the search engine contains no stateful functions.
     ///
     /// # Arguments
     ///
@@ -325,7 +346,8 @@ where
     }
 
     /// Performs a search based on the given query and returns a vector of references to the values ranked
-    /// by similarity.
+    /// by similarity. \
+    /// This version of the function is used, if the search engine contains no stateful functions.
     ///
     /// # Arguments
     ///
